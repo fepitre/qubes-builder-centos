@@ -1,0 +1,89 @@
+#!/bin/bash
+# vim: set ts=4 sw=4 sts=4 et :
+
+PLUGIN_DIR="`dirname $0`"
+
+INSTALLDIR=$1
+DIST=$2
+
+set -e
+if [ "${VERBOSE:-0}" -ge 2 -o "${DEBUG:-0}" -eq 1 ]; then
+    set -x
+else
+    YUM_OPTS="$YUM_OPTS -q"
+fi
+
+DOWNLOADDIR="${CACHEDIR}/base_rpms"
+
+YUM="yum --downloaddir=${DOWNLOADDIR} --downloadonly install"
+if type yumdownloader >/dev/null 2>/dev/null; then
+    # debian does not have --downloadonly plugin
+    YUM="yumdownloader --resolve --destdir=${DOWNLOADDIR}"
+elif type yum-deprecated >/dev/null 2>/dev/null; then
+    # DNF does not support --downloaddir option (RHBZ#1279001), so fallback to
+    # yum-deprecated for now
+    YUM="yum-deprecated --downloaddir=${DOWNLOADDIR} --downloadonly install"
+fi
+
+if ! [ -f "${INSTALLDIR}/tmp/.prepared_base" ]; then
+    echo "-> Initializing RPM database..."
+    RPM_OPTS=()
+    if [ -e /etc/debian_version ]; then
+	    # Debian by default keep rpmdb in ~/.rpmdb
+	    RPM_OPTS+=("--define=_dbpath %{_var}/lib/rpm")
+    fi
+    rpm "${RPM_OPTS[@]}" --initdb --root=${INSTALLDIR}
+    rpm "${RPM_OPTS[@]}" --import --root=${INSTALLDIR} \
+        ${PLUGIN_DIR}/keys/RPM-GPG-KEY-CentOS-${DIST#centos} \
+        ${PLUGIN_DIR}/keys/RPM-GPG-KEY-EPEL-${DIST#centos}
+ 
+    echo "-> Retreiving core RPM packages..."
+    INITIAL_PACKAGES="filesystem setup centos-release epel-release yum yum-utils"
+
+	# Add groupadd, su etc.
+	INITIAL_PACKAGES="$INITIAL_PACKAGES shadow-utils util-linux"
+
+    mkdir -p "${DOWNLOADDIR}"
+    yumconf=$(mktemp)
+    sed -e "s/\\\$releasever/${DIST#centos}/g" \
+        < "${PLUGIN_DIR}"/yum-bootstrap.conf \
+        > "$yumconf"
+    $YUM -c "$yumconf" -y \
+        --installroot="${INSTALLDIR}" \
+        ${INITIAL_PACKAGES}
+    rm -f "$yumconf"
+
+    echo "-> Verifying signatures..."
+    set +x
+    for file in "${DOWNLOADDIR}"/*; do
+        result=$(rpm "${RPM_OPTS[@]}" --root=${INSTALLDIR} --checksig "${file}") || {
+            echo "Filename: ${file} failed verification.  Exiting!"
+            exit 1
+        }
+        result_status="${result##*:}"
+        echo "${result_status}" | grep -q 'PGP' && {
+            echo "Filename: ${file} contains an invalid PGP signature. Exiting!"
+            exit 1
+        }
+        echo "${result_status}" | grep -q 'pgp' || {
+            echo "Filename: ${file} is not signed.  Exiting!"
+            exit 1
+        }
+    done
+    echo "-> Printing hashes of downloaded packages:"
+    sha256sum "${DOWNLOADDIR}/"*.rpm
+    if [ "${VERBOSE:-0}" -ge 2 -o "${DEBUG:-0}" -eq 1 ]; then
+        set -x
+    fi
+
+    echo "-> Installing core RPM packages..."
+    rpm "${RPM_OPTS[@]}" -U --replacepkgs --root="${INSTALLDIR}" "${DOWNLOADDIR}/"*.rpm || exit 1
+    for f in null urandom zero random console; do
+        cp -a /dev/$f $INSTALLDIR/dev/
+    done
+
+	# For compatibility with others packages spec Centos 7 <=> Fedora 20
+	echo "%fedora 20" >> ${INSTALLDIR}/etc/rpm/macros.dist
+
+    touch "${INSTALLDIR}/tmp/.prepared_base"
+fi

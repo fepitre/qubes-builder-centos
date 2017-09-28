@@ -73,9 +73,6 @@ ${PLUGIN_DIR}/update-local-repo.sh $DISTRO
 cp ${PLUGIN_DIR}/repos/builder-local.repo $DIR/etc/yum.repos.d/
 sed -i -e "s#ROOT#$PWD#" $DIR/etc/yum.repos.d/*-local.repo
 
-# Enable epel-testing
-chroot $DIR yum-config-manager --enable 'epel-testing'
-
 if [ -n "$USE_QUBES_REPO_VERSION" ]; then
     cp ${PLUGIN_DIR}/repos/qubes-repo-vm.repo $DIR/etc/yum.repos.d/
     if [ "$DISTRO" = "$DIST_DOM0" ]; then

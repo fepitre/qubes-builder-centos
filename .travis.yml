@@ -1,0 +1,29 @@
+sudo: required
+dist: trusty
+install: git clone -b centos https://github.com/fepitre/qubes-builder ~/qubes-builder
+before_script:
+ - export GNUPGHOME=~/qubes-builder/keyrings/git
+ - mkdir --parents "$GNUPGHOME"
+ - chmod --recursive 700 "$GNUPGHOME"
+ - gpg --import ~/qubes-builder/qubes-developers-keys.asc
+ - echo '427F11FD0FAA4B080123F01CDDFA1A3E36879494:6:' | gpg --import-ownertrust
+ - gpg --keyserver keys.gnupg.net --recv-keys "C7A3BA7D2DDAF042C77CA4D21DABC232BE02201E"
+ - gpg --fingerprint "C7A3BA7D2DDAF042C77CA4D21DABC232BE02201E"
+ - echo 'C7A3BA7D2DDAF042C77CA4D21DABC232BE02201E:6:' | gpg --import-ownertrust
+ - gpg --fingerprint "C7A3BA7D2DDAF042C77CA4D21DABC232BE02201E"
+ - export VERBOSE=3
+ - export DEBUG=1
+ - export CHECK_BRANCH=1
+ - export BRANCH_builder_centos=master
+ - export GIT_URL_builder_centos=https://github.com/fepitre/qubes-builder-centos.git
+ - export BUILDER_PLUGINS="builder-centos"
+ - env
+script: ~/qubes-builder/scripts/travis-build linux-template-builder
+after_success:
+ - ls -l ~/qubes-builder/qubes-src/linux-template-builder/rpm/noarch
+language: generic
+env:
+ - DISTS_VM=centos7 USE_QUBES_REPO_VERSION=3.2 USE_QUBES_REPO_TESTING=1
+ - DISTS_VM=centos7+minimal USE_QUBES_REPO_VERSION=3.2 USE_QUBES_REPO_TESTING=1
+ - DISTS_VM=centos7 USE_QUBES_REPO_TESTING=1 TEMPLATE_ROOT_WITH_PARTITIONS=1
+ - DISTS_VM=centos7+minimal USE_QUBES_REPO_VERSION=4.0 USE_QUBES_REPO_TESTING=1 TEMPLATE_ROOT_WITH_PARTITIONS=1

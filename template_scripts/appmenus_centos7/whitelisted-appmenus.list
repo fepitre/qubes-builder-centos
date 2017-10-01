@@ -1,4 +1,4 @@
-gnome-terminal.desktop
+org.gnome.Terminal.desktop
 org.gnome.Software.desktop
-gpk-update-viewer.desktop
+org.gnome.PackageUpdater.desktop
 gnome-control-center.desktop

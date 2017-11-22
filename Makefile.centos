@@ -39,6 +39,13 @@ ifdef REPO_PROXY
     YUM_OPTS += --setopt=proxy=$(REPO_PROXY)
 endif
 
+ifdef CENTOS_MIRROR
+    YUM_OPTS += --setopt=base.baseurl=$(CENTOS_MIRROR)/centos/$(subst centos,,$(DIST))/os/x86_64
+    YUM_OPTS += --setopt=updates.baseurl=$(CENTOS_MIRROR)/centos/$(subst centos,,$(DIST))/updates/x86_64
+    YUM_OPTS += --setopt=extras.baseurl=$(CENTOS_MIRROR)/centos/$(subst centos,,$(DIST))/extras/x86_64
+    YUM_OPTS += --setopt=epel.baseurl=$(CENTOS_MIRROR)/epel/$(subst centos,,$(DIST))/x86_64
+endif
+
 #ifeq ($(shell expr $(subst centos,,$(DIST)) \>= 22),1)
 #	YUM := dnf
 #	YUM_BUILDDEP := dnf builddep --allowerasing --best

@@ -10,6 +10,16 @@ if [ -n "${REPO_PROXY}" ]; then
     YUM_OPTS="$YUM_OPTS --setopt=proxy=${REPO_PROXY}"
 fi
 
+if [ -n "${CENTOS_MIRROR}" ]; then
+    YUM_OPTS="$YUM_OPTS --setopt=base.baseurl=${CENTOS_MIRROR%/}/${DIST/centos/}/os/x86_64"
+    YUM_OPTS="$YUM_OPTS --setopt=updates.baseurl=${CENTOS_MIRROR%/}/${DIST/centos/}/updates/x86_64"
+    YUM_OPTS="$YUM_OPTS --setopt=extras.baseurl=${CENTOS_MIRROR%/}/${DIST/centos/}/extras/x86_64"
+fi
+
+if [ -n "${EPEL_MIRROR}" ]; then
+    YUM_OPTS="$YUM_OPTS --setopt=epel.baseurl=${EPEL_MIRROR%/}/${DIST/centos/}/x86_64"
+fi
+
 #if [ "${DIST/fc/}" -ge 22 ]; then
     #YUM=dnf
 #else

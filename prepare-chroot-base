@@ -45,9 +45,46 @@ if ! [ -f "${INSTALLDIR}/tmp/.prepared_base" ]; then
 
     mkdir -p "${DOWNLOADDIR}"
     yumconf=$(mktemp)
+    yumconftmp=$(mktemp)
+
     sed -e "s/\\\$releasever/${DIST#centos}/g" \
         < "${PLUGIN_DIR}"/yum-bootstrap.conf \
         > "$yumconf"
+
+    # For defined mirrors in builder.conf we need to delete the mirrorlist option
+    # in the repo file because baseurl seems to not override it
+    if [ "x${CENTOS_MIRROR}" != "x" ]; then
+        awk '
+        BEGIN {
+            mirror=ARGV[1];     delete ARGV[1];
+        }
+        {
+            gsub("^mirrorlist", "#mirrorlist");
+            gsub("^#baseurl=.*/(centos|CentOS)/", "baseurl=" mirror "/");
+            print;
+        }' "${CENTOS_MIRROR%/}" \
+            < "$yumconf" \
+            > "$yumconftmp"
+        mv $yumconftmp $yumconf
+    fi
+
+    # For defined mirrors in builder.conf we need to delete the metalink option
+    # in the repo file because baseurl seems to not override it
+    if [ "x${EPEL_MIRROR}" != "x" ]; then
+        awk '
+        BEGIN {
+            mirror=ARGV[1];     delete ARGV[1];
+        }
+        {
+            gsub("^metalink", "#metalink");
+            gsub("^#baseurl=.*/epel/", "baseurl=" mirror "/");
+            print;
+        }' "${EPEL_MIRROR%/}" \
+            < "$yumconf" \
+            > "$yumconftmp"
+        mv $yumconftmp $yumconf
+    fi
+
     $YUM -c "$yumconf" -y \
         --installroot="${INSTALLDIR}" \
         ${INITIAL_PACKAGES}

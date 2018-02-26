@@ -25,6 +25,7 @@ RPM_BUILD_DEFINES += --define "backend_vmm $(BACKEND_VMM)"
 # List packages produced by by given spec file(s)
 RPM_QUERY_DEFINES  = --define "dist .$(DIST)" 
 RPM_QUERY_DEFINES += --define "centos $(subst centos,,$(DIST))"
+RPM_QUERY_DEFINES += --define "rhel $(subst centos,,$(DIST))"
 RPM_QUERY_DEFINES += --define "qubes_builder 1"
 RPM_QUERY_DEFINES += --define "backend_vmm $(BACKEND_VMM)"
 RPM_QUERY_FORMAT = "$(OUTPUT_DIR)/%{ARCH}/%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}.rpm\n"
